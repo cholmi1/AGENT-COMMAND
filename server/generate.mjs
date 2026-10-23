@@ -67,23 +67,25 @@ const SCHEMA_HINT = `다음 JSON 만 출력하세요(설명·코드블록 금지
 {"title":"30자 안 제목","situation":"내 상황 요약(500자 안)","goal":"만들 것 한두 문장(300자 안)","screens":["화면 5개 이하"],"must":["꼭 되어야 하는 것 5개 이하"],"first":"첫 판 범위","later":["미루는 것"],"extra_rules":["추가 규칙 3개 이하"],"ask":[{"q":"되묻는 질문","options":["선택지","선택지"]}],"refuse":"거절할 때만 이유"}
 사용자는 프로그래밍을 모릅니다. 쉬운 한국어로 쓰고, 저장·배포·서버 같은 말은 일상 비유를 한 번 붙이세요.`
 
-async function callOpenAI(messages, model = 'gpt-4o-mini') {
+async function callOpenAI(messages, json = false, model = process.env.OPENAI_MODEL || 'gpt-4o-mini') {
   const r = await fetch('https://api.openai.com/v1/chat/completions', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + process.env.OPENAI_API_KEY },
-    body: JSON.stringify({ model, messages, temperature: 0.4, response_format: { type: 'json_object' } })
+    signal: AbortSignal.timeout(20000),
+    body: JSON.stringify({ model, messages, temperature: 0.4, max_tokens: 1600, ...(json ? { response_format: { type: 'json_object' } } : {}) })
   });
   if (!r.ok) throw new Error('openai_' + r.status);
   const j = await r.json();
   return j.choices?.[0]?.message?.content || '';
 }
-async function callAnthropic(messages, model = 'claude-3-5-haiku-latest') {
+async function callAnthropic(messages, model = process.env.ANTHROPIC_MODEL || 'claude-3-5-haiku-20241022') {
   const sys = messages.find((m) => m.role === 'system')?.content || '';
   const rest = messages.filter((m) => m.role !== 'system');
   const r = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'x-api-key': process.env.ANTHROPIC_API_KEY, 'anthropic-version': '2023-06-01' },
-    body: JSON.stringify({ model, max_tokens: 1200, system: sys, messages: rest })
+    signal: AbortSignal.timeout(20000),
+    body: JSON.stringify({ model, max_tokens: 1600, system: sys, messages: rest })
   });
   if (!r.ok) throw new Error('anthropic_' + r.status);
   const j = await r.json();
@@ -110,11 +112,12 @@ export async function generatePrompt(body) {
     { role: 'user', content: user }
   ];
   try {
-    const raw = provider === 'openai' ? await callOpenAI(messages) : await callAnthropic(messages);
+    const raw = provider === 'openai' ? await callOpenAI(messages, true) : await callAnthropic(messages);
     const json = JSON.parse(raw.replace(/^```(json)?/i, '').replace(/```$/, '').trim());
-    return { mode: provider, json };
+    if (!json || typeof json !== 'object' || Array.isArray(json)) throw new Error('invalid_result');
+    return { mode: 'ai', json };
   } catch (e) {
-    return { mode: 'local-fallback', error: String(e.message || e), json: localPrompt(body) };
+    return { mode: 'local', json: localPrompt(body) };
   }
 }
 
@@ -136,10 +139,10 @@ export async function generateHelp(body) {
     try {
       const messages = [
         { role: 'system', content: '너는 프로그래밍을 모르는 사람에게 «다음 한 걸음» 하나만 알려 주는 조수다. 3~5줄, 쉬운 한국어, 명령은 한 줄씩. 추측이면 추측이라고 밝혀라.' },
-        { role: 'user', content: '만들던 것: ' + clean(body.making, 300) + '\n고른 메뉴: ' + clean(body.menu, 200) + '\n막힌 내용: ' + txt + (body.image ? '\n(화면 캡처도 함께 옴)' : '') }
+        { role: 'user', content: '만들던 것: ' + clean(body.making, 300) + '\n고른 메뉴: ' + clean(body.menu, 200) + '\n막힌 내용: ' + txt }
       ];
       const raw = provider === 'openai' ? await callOpenAI(messages) : await callAnthropic(messages);
-      return { text: raw.trim(), mode: provider };
+      return { text: raw.trim(), mode: 'ai' };
     } catch (e) { /* 아래 규칙 기반으로 */ }
   }
   if (!txt) return { text: '캡처만으로는 단정하기 어렵습니다. 화면에 뜬 글(에러 문구)을 그대로 붙여넣어 주세요.', mode: 'local' };
@@ -149,3 +152,5 @@ export async function generateHelp(body) {
   lines.push('', '※ 이 답은 규칙 기반입니다. AI 키를 넣으면 더 자세히 답합니다(README 참고).');
   return { text: lines.join('\n'), mode: 'local' };
 }
+
+export function generationMode(env = process.env) { return env.OPENAI_API_KEY || env.ANTHROPIC_API_KEY ? 'ai' : 'local'; }

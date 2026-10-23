@@ -1,12 +1,19 @@
 {
-  "name": "agent-prompt-clone",
+  "name": "agent-command",
   "version": "1.0.0",
   "private": true,
   "type": "module",
-  "description": "에이전트에게 맡기는 지시서 — 정적 분석·런타임 관측 후 재구성한 복제본 (REA + ego-browser)",
+  "description": "AGENT-COMMAND independent instruction helper",
   "scripts": {
     "start": "node server/server.mjs",
-    "dev": "node server/server.mjs"
+    "dev": "node --env-file-if-exists=.env server/server.mjs",
+    "build": "node server/build.mjs",
+    "test": "node --test"
   },
-  "engines": { "node": ">=20" }
+  "engines": {
+    "node": ">=22"
+  },
+  "dependencies": {
+    "firebase-admin": "14.5.0"
+  }
 }
