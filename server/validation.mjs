@@ -1,4 +1,5 @@
 import { HttpError } from './errors.mjs';
+import { validateAI } from './ai.mjs';
 export const BODY_LIMIT = 128 * 1024;
 export async function readBody(req) {
   const length = req.headers['content-length'];
@@ -21,7 +22,7 @@ export function validateInput(type, raw) {
   if (!raw || typeof raw !== 'object' || Array.isArray(raw)) throw new HttpError(400,'invalid_body');
   if (Object.keys(raw).some(k => /image|screenshot|capture/i.test(k))) throw new HttpError(400,'unsupported_image');
   const fields = type === 'prompt' ? { sit:1200, want:1200, menu:200, more:600 } : { txt:3000, making:300, menu:200 };
-  if (Object.keys(raw).some(k => k !== 'consent' && !Object.hasOwn(fields,k))) throw new HttpError(400,'unknown_field');
+  if (Object.keys(raw).some(k => k !== 'consent' && k !== 'ai' && !Object.hasOwn(fields,k))) throw new HttpError(400,'unknown_field');
   if ('consent' in raw && typeof raw.consent !== 'boolean') throw new HttpError(400,'invalid_consent');
   const body = {};
   for (const [key,max] of Object.entries(fields)) {
@@ -31,5 +32,6 @@ export function validateInput(type, raw) {
   }
   if (type === 'prompt' ? !body.want && !body.sit : !body.txt) throw new HttpError(400,'empty_input');
   body.consent = raw.consent === true;
+  if ('ai' in raw) body.ai = validateAI(raw.ai);
   return body;
 }

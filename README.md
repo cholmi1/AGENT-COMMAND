@@ -8,12 +8,29 @@
 - 지시서 작성: https://agent-command-delta.vercel.app/tools/agent-prompt/
 - Firebase 프로젝트: agent-command-2ab5a, Firestore 서울(asia-northeast3), Spark.
 - Vercel 프로젝트: agent-command, Hobby, GitHub main 자동 배포.
-- 기본 규칙 모드로 배포했습니다. 유료 AI 키는 연결하지 않았습니다.
+- 화면 기본 선택은 DeepSeek / deepseek-flash입니다. 사용할 본인 API 키를 화면에서 입력해야 AI가 호출됩니다. 키 없이 쓰려면 기본 규칙을 선택하세요. 운영자 공용 유료 AI 키는 연결하지 않았습니다.
 - 2026-10-24 실제 공개 주소에서 익명 인증, 생성, 선택 저장, 도움말, 복사, 기록 삭제, 비인증 API 차단, 비공개 소스 경로 차단을 확인했습니다.
 
 의존성은 Vercel 모듈 호환을 위해 firebase-admin 13.10.0을 사용하고, 전이 의존성 uuid는 보안 수정판 11.1.1로 고정했습니다. 적용 시 npm audit 경고 0건, 단위 테스트 13개 통과. SDK 갱신 시 실제 서버리스 환경에서도 재검증하세요.
 
 저장 기록은 서버가 만든 핵심 결과를 저장합니다. 불러올 때 현재 선택한 기술·화면 조건 및 최신 공통 규칙과 결합하므로, 처음 복사한 완성 문서의 정확한 원본 보관 기능은 아닙니다.
+
+## 내 API 키로 AI 사용하기
+
+1. 작성 화면의 AI 설정에서 제공업체를 선택합니다. 기본은 DeepSeek, 모델은 deepseek-flash입니다. OpenAI·Anthropic도 선택할 수 있습니다.
+2. 본인 API 키를 비밀번호 형태 입력칸에 직접 입력합니다. DeepSeek 키 발급 화면: https://platform.deepseek.com/api_keys
+3. 선택한 업체로 입력을 전송하고 API 요금이 본인 계정에 청구될 수 있다는 동의를 체크합니다. 저장 동의와는 별개입니다.
+4. 상황과 목표를 적고 지시서 만들기 또는 도움말 버튼을 누릅니다. 입력·선택만으로는 자동 호출하지 않으며, 실제 성공 응답 후에만 최근 요청 성공으로 표시합니다.
+5. 키 지우기, 제공업체 변경, 새로고침·페이지 이동·탭 닫기 시 키와 요금 동의를 초기화합니다. 키는 앱의 브라우저 저장소·쿠키·URL·Firestore 기록·소스에 보관하지 않습니다. 브라우저의 Firebase 익명 로그인 정보는 별도입니다.
+
+키는 HTTPS 요청 본문으로 이 앱의 Vercel 서버를 거쳐 선택한 업체의 고정 공식 API로 전송됩니다. 생성 프롬프트에는 키를 넣지 않으며, 저장 동의를 체크해도 ai 객체는 기록에서 제외합니다. 입력·결과에 같은 키가 우연히 반복되면 가립니다. 인프라 기본 로그·각 AI 업체의 데이터 정책은 별도입니다. 공용·신뢰하지 않는 기기에서는 입력하지 마세요.
+
+인증 실패, 잔액·이용 한도 부족, 요청 과다, 모델 오류, 시간 초과는 안전한 오류로 알립니다. 본인 키를 명시한 요청 실패를 기본 규칙 성공으로 위장하지 않습니다. 실패한 호출도 서비스 일일 횟수에 포함되며, 시간 초과·중단 시 업체에서 이미 처리한 사용료가 발생할 수 있습니다. 일일 상한은 기존 지시서5·도움말10·전체100을 유지합니다.
+
+모델 기본값(2026-10-24 공식 문서 확인): DeepSeek deepseek-flash, OpenAI gpt-5.6-terra, Anthropic claude-haiku-5-5. 직접 입력한 모델은 해당 공식 Chat Completions 또는 Messages API를 지원하고 계정 권한이 있어야 합니다. DeepSeek는 비추론 모드로 호출합니다. 가격·사용 가능 여부는 업체에서 다시 확인하세요.
+공식 근거: https://api-docs.deepseek.com/ , https://api-docs.deepseek.com/guides/json_mode , https://developers.openai.com/api/docs/models/gpt-5.6-terra , https://platform.claude.com/docs/en/models/overview
+
+BYOK 회귀 검사: 추가149개와 기존13개, 합계162개. 외부 AI 응답·인증 오류·동시 요청·키 비저장 검사는 모의 응답을 사용했습니다. 실제 유효 API 키를 사용한 유료 생성은 아직 검증하지 않았습니다.
 
 ## 실행
 
@@ -28,11 +45,11 @@ npm run dev는 .env를 읽습니다. 실제 비밀은 Git에 넣지 않습니다
 - FIREBASE_SERVICE_ACCOUNT_JSON 필수 비밀: JSON 객체 문자열. 실제 서비스 계정 project_id, client_email, private_key 포함. 파일 경로나 Base64가 아닙니다. private_key 개행은 JSON 내 이스케이프 개행을 사용합니다. 브라우저에 노출하지 않습니다.
 - FIREBASE_PROJECT_ID 선택: 생략 시 서비스 계정 project_id. 웹 설정과 서비스 계정 프로젝트 ID 모두 일치해야 합니다.
 - GLOBAL_DAILY_CAP 선택: 기본100, 1~100000 정수. KST 날짜별 전체 prompt/help 합계 상한. 규칙 기반에도 적용합니다.
-- OPENAI_API_KEY / ANTHROPIC_API_KEY 선택: 현재 둘 다 설정하지 않습니다. 없으면 local. 둘 다 있으면 OpenAI 우선.
-- OPENAI_MODEL / ANTHROPIC_MODEL 선택: 기본 gpt-4o-mini / claude-3-5-haiku-20241022. 최신이라는 의미나 지원 보장이 아니며 AI 사용 전 모델·요금을 확인합니다.
+- OPENAI_API_KEY / ANTHROPIC_API_KEY / DEEPSEEK_API_KEY 선택: 운영자 공용 서버 키입니다. 현재 모두 미설정입니다. 구형 요청에서 ai를 생략한 경우에만 OpenAI→Anthropic→DeepSeek 순으로 사용하며, 새 화면의 명시적인 선택이 우선합니다.
+- OPENAI_MODEL / ANTHROPIC_MODEL / DEEPSEEK_MODEL 선택: 기본 gpt-5.6-terra / claude-haiku-5-5 / deepseek-flash. UI 개인 키와는 별개입니다. 서버 키도 사용 전 비용·모델을 확인합니다.
 - PORT / HOST: 로컬 기본8080 / 127.0.0.1.
 
-AI를 켜면 입력 텍스트가 선택한 제공사로 전송됩니다. 저장 동의는 앱 Firestore 저장 동의이며 제공사 정책을 대신하지 않습니다. AI 요청 timeout20초, 출력 토큰1600 상한. 실패 시 오류 원문 없이 local로 대체합니다. 호출 상한은 금액 예산이 아니므로 제공사 예산 제한도 별도 필요합니다.
+AI를 켜면 입력 텍스트가 선택한 제공사로 전송됩니다. 저장 동의는 앱 Firestore 저장 동의이며 제공사 정책을 대신하지 않습니다. AI 요청 timeout35초, 출력 토큰2048 상한. ai를 생략한 구형 서버 키 요청만 실패 시 local로 대체합니다. 명시적인 개인 키 요청은 실패를 오류로 반환합니다. 호출 상한은 금액 예산이 아니므로 제공사 예산 제한도 별도 필요합니다.
 
 ## Firebase + Vercel 배포
 
@@ -61,6 +78,8 @@ Spark/Hobby 무료 한도 내 운영 목표이며 Firebase Functions billing 연
 - POST /api/help: {txt:string<=3000,making?:string<=300,menu?:string<=200,consent?:boolean}. txt 필수. 응답 {text,keptId:string|null,mode:local|ai}.
 - GET /api/history -> {items:[{id,type:prompt|help,createdAt:ISO문자열,output:string,title:string}]}. 본인 최신20개.
 - DELETE /api/history?id=ID -> {ok:true}. 본인 소유만, 타인·없는 기록404.
+
+POST prompt/help에는 선택 필드 ai:{provider:local|openai|anthropic|deepseek,apiKey?:string,model?:string}을 추가할 수 있습니다. local은 provider만 허용하고 외부 제공사는 공백 없는 ASCII 키10~512자와 모델 ID 최대120자를 검증합니다. ai는 생성·저장 본문에서 분리합니다. 성공 응답에 provider와 model(기본 규칙은 null)이 추가됩니다. 인증·입력 검증 후에만 업체를 호출하며 임의 API 주소·리다이렉트는 허용하지 않습니다.
 
 POST application/json 최대128KiB(131072바이트), stream 및 Vercel 사전 파싱 본문 지원. 길이는 JS 문자열 길이. 알 수 없는 필드·잘못된 타입·동의 값 거부. image/screenshot/capture 필드 지원하지 않아 거부하며 이미지 전달·저장 없음. 생성 응답 mode는 AI 오류 시 local일 수 있습니다.
 
