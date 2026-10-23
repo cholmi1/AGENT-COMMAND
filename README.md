@@ -2,6 +2,19 @@
 
 독립 한국어 지시서·문제 해결 도구. Vercel Node 서버리스 API와 Firebase Authentication/Firestore를 사용합니다. Firebase Functions는 사용하지 않습니다. 유료 AI 키가 없으면 결정적 규칙 기반으로 작동합니다.
 
+## 공개 배포
+
+- 앱: https://agent-command-delta.vercel.app
+- 지시서 작성: https://agent-command-delta.vercel.app/tools/agent-prompt/
+- Firebase 프로젝트: agent-command-2ab5a, Firestore 서울(asia-northeast3), Spark.
+- Vercel 프로젝트: agent-command, Hobby, GitHub main 자동 배포.
+- 기본 규칙 모드로 배포했습니다. 유료 AI 키는 연결하지 않았습니다.
+- 2026-10-24 실제 공개 주소에서 익명 인증, 생성, 선택 저장, 도움말, 복사, 기록 삭제, 비인증 API 차단, 비공개 소스 경로 차단을 확인했습니다.
+
+의존성은 Vercel 모듈 호환을 위해 firebase-admin 13.10.0을 사용하고, 전이 의존성 uuid는 보안 수정판 11.1.1로 고정했습니다. 적용 시 npm audit 경고 0건, 단위 테스트 13개 통과. SDK 갱신 시 실제 서버리스 환경에서도 재검증하세요.
+
+저장 기록은 서버가 만든 핵심 결과를 저장합니다. 불러올 때 현재 선택한 기술·화면 조건 및 최신 공통 규칙과 결합하므로, 처음 복사한 완성 문서의 정확한 원본 보관 기능은 아닙니다.
+
 ## 실행
 
 Node.js 22 이상. npm ci → npm test → npm run build → npm run dev.
