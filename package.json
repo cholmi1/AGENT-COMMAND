@@ -1,0 +1,12 @@
+{
+  "name": "agent-prompt-clone",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "에이전트에게 맡기는 지시서 — 정적 분석·런타임 관측 후 재구성한 복제본 (REA + ego-browser)",
+  "scripts": {
+    "start": "node server/server.mjs",
+    "dev": "node server/server.mjs"
+  },
+  "engines": { "node": ">=20" }
+}
